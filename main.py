@@ -13,7 +13,8 @@ class Preprocessor():
         self.stemmer = Stemmer()
         self.lemmatizer = Lemmatizer() 
         self.stopwords_set = set(stopwords_list())
-        self.stopwords_set.update(['.',':','?','!','/','//','*','**','***','[',']','{','}',';','\'','\"','(',')',''])
+        self.stopwords_set.update(['.',':','?','!','/','//','*','**','***','[',']','{','}',';','\'','\"','(',')','','،'])
+        
         
     def filter_stopwords(self,input_tokens):
         return [token for token in input_tokens if token not in self.stopwords_set]
@@ -55,15 +56,13 @@ class Positional_index():
             return result
         return None
     
-
-if __name__ == '__main__':
+def main():
     preprocessor = Preprocessor()
-
+    dataset = pd.read_excel("C:\\university\\Information Retrival\\Project\\information-retrieval\\IR1_7k_news.xlsx")
     if(os.path.isfile('positional_index.pickle')):
         file_to_read = open("positional_index.pickle", "rb")
         positional_index=pickle.load(file_to_read)
     else:
-        dataset = pd.read_excel("C:\\university\\Information Retrival\\Project\\information-retrieval\\IR1_7k_news.xlsx")
         positional_index = Positional_index(dataset)
         for i in range(len(dataset)): #deploy phase
         # for i in range(2):  #test phase
@@ -95,6 +94,11 @@ if __name__ == '__main__':
             most_related_id = list(ndict.keys())[0]
             print("Id of most related document is ",most_related_id," and its title is :\n")
             print(positional_index.titles[most_related_id])
+            sentences = sent_tokenize(dataset.loc[most_related_id].content)
+            print("related sentences:\n")
+            for sen in sentences:
+                if(tokens[0] in sen):
+                    print(sen)
         else:
             docIDs = []
             docIDs_l = []
@@ -129,7 +133,53 @@ if __name__ == '__main__':
             most_related_id = final_list[0][0]
             print("Id of most related document is ",most_related_id," and its title is :\n")
             print(positional_index.titles[most_related_id])
+            sentences = sent_tokenize(dataset.loc[most_related_id].content)
+            print("related sentences:\n")
+            for sen in sentences:
+                if(tokens[0] in sen):
+                    print(sen)    
+    
+def check_zipfs_law():
+    preprocessor = Preprocessor()
+    dataset = pd.read_excel("C:\\university\\Information Retrival\\Project\\information-retrieval\\IR1_7k_news.xlsx")
+    positional_index = Positional_index(dataset)
+    for i in range(len(dataset)): #deploy phase
+    # for i in range(2):  #test phase
+        #preprocess
+        normalized_content = preprocessor.fnormilizer(dataset.loc[i].content)
+        tokens = preprocessor.tokenizer(normalized_content)
+        tokens = preprocessor.filter_stopwords(tokens)
+        for j in range(len(tokens)):
+            tokens[j] = preprocessor.lemmetizer_and_stemmer(tokens[j])
+        #indexing
+        positional_index.add_and_merge_content(tokens,i)
+    frequency = []
+    for key in positional_index.indexes.keys():
+        frequency.append((key,positional_index.indexes[key]['count']))
+    print(sorted(frequency, key=lambda x: x[1],reverse=True)[:20])
 
+def check_heaps_law():
+    preprocessor = Preprocessor()
+    dataset = pd.read_excel("C:\\university\\Information Retrival\\Project\\information-retrieval\\IR1_7k_news.xlsx")
+    positional_index = Positional_index(dataset)
+    count = 1000
+    for i in range(count): #deploy phase
+    # for i in range(2):  #test phase
+        #preprocess
+        normalized_content = preprocessor.fnormilizer(dataset.loc[i].content)
+        tokens = preprocessor.tokenizer(normalized_content)
+        tokens = preprocessor.filter_stopwords(tokens)
+        for j in range(len(tokens)):
+            tokens[j] = preprocessor.lemmetizer_and_stemmer(tokens[j])
+        #indexing
+        positional_index.add_and_merge_content(tokens,i)
+    sum =0
+    for key in positional_index.indexes.keys():
+        sum+= positional_index.indexes[key]['count']
+    print("sum for tokens for ",count," document is: ",sum," and length of vocabulary(M) is : ", len(list(positional_index.indexes.keys())))
 
-                
+if __name__ == '__main__':
+    # main()
+    # check_zipfs_law()
+    check_heaps_law()            
 
